@@ -385,48 +385,38 @@ mercator.resetMap = (mapConfig) => {
 
 // [Side Effects] Hides all raster layers in mapConfig except those
 // with title === layerTitle.
-mercator.setVisibleLayer = function (mapConfig, layerTitle) {
-    mapConfig.layers.forEach(
-        function (layer) {
-            if (layer.getVisible() === true && layer instanceof TileLayer) {
-                layer.setVisible(false);
-            }
-            if (layer.get("title") === layerTitle) {
-                layer.setVisible(true);
-            }
+mercator.setVisibleLayer = (mapConfig, layerTitle) => {
+    mapConfig.layers.forEach(layer => {
+        if (layer.getVisible() === true && layer instanceof TileLayer) {
+            layer.setVisible(false);
         }
-    );
+        if (layer.get("title") === layerTitle) {
+            layer.setVisible(true);
+        }
+    });
     return mapConfig;
 };
 
 // [Pure] Returns the map layer with title === layerTitle or null if no
 // such layer exists.
-mercator.getLayerByTitle = function (mapConfig, layerTitle) {
-    return mapConfig.layers.getArray().find(
-        function (layer) {
-            return layer.get("title") === layerTitle;
-        }
-    );
-};
+mercator.getLayerByTitle = (mapConfig, layerTitle) =>
+    mapConfig.layers.getArray().find(layer => layer.get("title") === layerTitle);
 
 // [Pure] Returns the initial layerConfig for the map layer with title
 // === layerTitle or null if no such layer exists.
-mercator.getLayerConfigByTitle = function (mapConfig, layerTitle) {
-    return mapConfig.init.layerConfigs.find(
-        function (layerConfig) {
-            return layerConfig.title === layerTitle;
-        }
-    );
-};
+mercator.getLayerConfigByTitle = (mapConfig, layerTitle) =>
+    mapConfig.init.layerConfigs.find(layerConfig => layerConfig.title === layerTitle);
 
 // [Side Effects] Finds the map layer with title === layerTitle and
 // applies transformer to its initial sourceConfig to create a new
 // source for the layer.
-mercator.updateLayerSource = function (mapConfig, layerTitle, transformer, caller) {
+mercator.updateLayerSource = (mapConfig, layerTitle, transformer, caller) => {
     const layer = mercator.getLayerByTitle(mapConfig, layerTitle);
     const layerConfig = mercator.getLayerConfigByTitle(mapConfig, layerTitle);
     if (layer && layerConfig) {
-        layer.setSource(mercator.createSource(transformer.call(caller, layerConfig.sourceConfig), layerConfig.id, mapConfig.documentRoot));
+        layer.setSource(mercator.createSource(transformer.call(caller, layerConfig.sourceConfig),
+                                              layerConfig.id,
+                                              mapConfig.documentRoot));
     }
 };
 
@@ -439,7 +429,7 @@ mercator.updateLayerSource = function (mapConfig, layerTitle, transformer, calle
 //                                                {COVERAGE_CQL_FILTER: "(acquisitionDate>='" + imageryYear + "-01-01')"
 //                                                                 + "AND(acquisitionDate<='" + imageryYear + "-12-31')",
 //                                                 FEATUREPROFILE: stackingProfile});
-mercator.updateLayerWmsParams = function (mapConfig, layerTitle, newParams) {
+mercator.updateLayerWmsParams = (mapConfig, layerTitle, newParams) => {
     const layer = mercator.getLayerByTitle(mapConfig, layerTitle);
     if (layer) {
         const mergedParams = Object.assign({}, layer.getSource().getParams(), newParams);
@@ -508,7 +498,7 @@ mercator.getCircleStyle = function (radius, fillColor, borderColor, borderWidth,
                     width: borderWidth,
                 }),
             }),
-            text: new StyleText({
+            text: new Text({
                 text: text.toString(),
                 fill: new Fill({ color: textFillColor }),
             }),
