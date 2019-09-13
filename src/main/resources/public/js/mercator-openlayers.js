@@ -89,132 +89,123 @@ mercator.getViewRadius = (mapConfig) => {
 ***
 *****************************************************************************/
 
-// [Pure] Returns a new ol.source.* object or null if the sourceConfig
-// is invalid.
-mercator.createSource = function (sourceConfig, imageryId, documentRoot) {
-    if (["DigitalGlobe", "EarthWatch"].includes(sourceConfig.type)) {
-        return new XYZ({
-            url: documentRoot + "/get-tile?imageryId=" + imageryId + "&z={z}&x={x}&y={-y}",
-            attribution: "© DigitalGlobe, Inc",
-        });
-    } else if (sourceConfig.type === "Planet") {
-        return new XYZ({
-            url: documentRoot
-                 + "/get-tile?imageryId=" + imageryId
-                 + "&z={z}&x={x}&y={y}&tile={0-3}&month=" + sourceConfig.month
-                 + "&year=" + sourceConfig.year,
-            attribution: "© Planet Labs, Inc",
-        });
-    } else if (sourceConfig.type === "BingMaps") {
-        return new BingMaps({
-            imagerySet: sourceConfig.imageryId,
-            key: sourceConfig.accessToken,
-            maxZoom: 19,
-        });
-    } else if (sourceConfig.type === "GeoServer") {
-        return new TileWMS({
-            serverType: "geoserver",
-            url: documentRoot + "/get-tile",
-            params: { LAYERS: "none", imageryId: imageryId },
-        });
-    } else if (sourceConfig.type === "GeeGateway") {
-        //get variables and make ajax call to get mapid and token
-        //then add xyz layer
-        //const fts = {'LANDSAT5': 'Landsat5Filtered', 'LANDSAT7': 'Landsat7Filtered', 'LANDSAT8':'Landsat8Filtered', 'Sentinel2': 'FilteredSentinel'};
-        //const url = "http://collect.earth:8888/" + fts[sourceConfig.geeParams.filterType];
-        const url = (sourceConfig.path) ? "thegateway" : sourceConfig.geeUrl;
-        const cloudVar = sourceConfig.geeParams.visParams.cloudLessThan ? parseInt(sourceConfig.geeParams.visParams.cloudLessThan) : "";
-        let visParams;
-        try {
-            visParams = JSON.parse(sourceConfig.geeParams.visParams);
-        } catch (e) {
-            visParams = sourceConfig.geeParams.visParams;
-        }
-        const theJson = {
-            dateFrom: sourceConfig.geeParams.startDate,
-            dateTo: sourceConfig.geeParams.endDate,
-            bands: sourceConfig.geeParams.visParams.bands,
-            min: sourceConfig.geeParams.visParams.min,
-            max: sourceConfig.geeParams.visParams.max,
-            cloudLessThan: cloudVar,
-            visParams: visParams,
-            path: sourceConfig.geeParams.path,
-        };
-        if (sourceConfig.geeParams.ImageAsset) {
-            theJson.imageName = sourceConfig.geeParams.ImageAsset;
-        } else if (sourceConfig.geeParams.ImageCollectionAsset) {
-            theJson.imageName = sourceConfig.geeParams.ImageCollectionAsset;
-        }
-        const theID = Math.random().toString(36).substr(2, 16) + "_" + Math.random().toString(36).substr(2, 9);
-        const geeLayer = new XYZ({
-            url: "https://earthengine.googleapis.com/map/temp/{z}/{x}/{y}?token=",
-            id: theID,
-        });
-        geeLayer.setProperties({ id: theID });
-        if (sourceConfig.create) {
-            fetch(url, {
-                method: "POST",
-                headers: {
-                    "Accept": "application/json",
-                    "Content-Type": "application/json",
-                    mapConfig: sourceConfig,
-                    LayerId: theID,
-                },
-                body: JSON.stringify(theJson),
-            })
-                .then(res => {
-                    if (res.ok) {
-                        return res.json();
-                    } else {
-                        Promise.reject();
-                    }
-                })
-                .then(data => {
-                    if (data.hasOwnProperty("mapid")) {
-                        const geeLayer = new XYZ({
-                            url: "https://earthengine.googleapis.com/map/" + data.mapid + "/{z}/{x}/{y}?token=" + data.token,
-                        });
-                        mercator.currentMap.getLayers().forEach(function (lyr) {
-                            if (theID && theID === lyr.getSource().get("id")) {
-                                lyr.setSource(geeLayer);
-                            }
-                        });
-                    } else {
-                        console.warn("Wrong Data Returned");
-                    }
-                }).catch(response => {
-                    console.log("Error loading EE imagery: ");
-                    console.log(response);
-                });
-        }
-        return geeLayer;
-
-    } else {
-        return null;
+// [Pure] If text is valid JSON, return the parsed value. Otherwise
+// return the text unmodified.
+mercator.maybeParseJson = (text) => {
+    try {
+        return JSON.parse(text);
+    } catch (e) {
+        return text;
     }
 };
 
-// [Pure] Returns a new TileLayer object or null if the
-// layerConfig is invalid.
-mercator.createLayer = function (layerConfig, documentRoot) {
-    layerConfig.sourceConfig.create = true;
-    const source = mercator.createSource(layerConfig.sourceConfig, layerConfig.id, documentRoot);
-    if (!source) {
-        return null;
-    } else if (layerConfig.extent != null) {
-        return new TileLayer({
-            title: layerConfig.title,
-            visible: false,
-            extent: layerConfig.extent,
-            source: source,
-        });
-    } else {
-        return new TileLayer({
-            title: layerConfig.title,
-            visible: false,
-            source: source,
-        });
+// FIXME: Remove mercator.currentMap once mercator.sendGeeQuery() has
+// been simplified.
+mercator.currentMap = null;
+
+// [Side Effects] Makes an AJAX call to get the GEE mapid and token
+// and then updates the temporary XYZ layer's source URL.
+mercator.sendGeeQuery = (sourceConfig) => {
+    const theID = Math.random().toString(36).substr(2, 16) + "_" + Math.random().toString(36).substr(2, 9); // FIXME: id should be set as the layer title
+    if (sourceConfig.create) { // FIXME: When would sourceConfig.create not be true?
+        sourceConfig.geeParams.visParams = mercator.maybeParseJson(sourceConfig.geeParams.visParams); // FIXME: Is this necessary?
+        fetch(sourceConfig.path ? "thegateway" : sourceConfig.geeUrl, // FIXME: What does fetch("thegateway") do? There's no route for this.
+              {
+                  method: "POST",
+                  headers: {
+                      "Accept":       "application/json",
+                      "Content-Type": "application/json",
+                      "mapConfig":    sourceConfig, // FIXME: Why isn't this passed in body? Is it needed?
+                      "LayerId":      theID,        // FIXME: LayerId -> layerId, Why isn't this passed in body? Is it needed?
+                  },
+                  body: JSON.stringify({
+                      dateFrom:      sourceConfig.geeParams.startDate,
+                      dateTo:        sourceConfig.geeParams.endDate,
+                      bands:         sourceConfig.geeParams.visParams.bands,
+                      min:           sourceConfig.geeParams.visParams.min,
+                      max:           sourceConfig.geeParams.visParams.max,
+                      cloudLessThan: sourceConfig.geeParams.visParams.cloudLessThan ? parseInt(sourceConfig.geeParams.visParams.cloudLessThan) : "", // FIXME: "" should be an integer
+                      visParams:     sourceConfig.geeParams.visParams,
+                      path:          sourceConfig.geeParams.path,
+                      imageName:     sourceConfig.geeParams.ImageAsset || sourceConfig.geeParams.ImageCollectionAsset,
+                  }),
+              })
+            .then(res => res.ok ? res.json() : Promise.reject())
+            .then(data => {
+                if (data.mapid && data.token) {
+                    // FIXME: Use this instead:
+                    // mercator.updateLayerSource(mapConfig,
+                    //                            theID,
+                    //                            sourceConfig => {
+                    //                                sourceConfig.url = "https://earthengine.googleapis.com/map/" + data.mapid + "/{z}/{x}/{y}?token=" + data.token;
+                    //                                return sourceConfig;
+                    //                            },
+                    //                            null); // or this
+                    // FIXME: Remove mercator.currentMap once this code has been deleted.
+                    const tempLayer = mercator.currentMap.getLayers().find(layer => theID === layer.getSource().get("id"));
+                    tempLayer.setSource(new XYZ({
+                        url: "https://earthengine.googleapis.com/map/" + data.mapid + "/{z}/{x}/{y}?token=" + data.token,
+                    }));
+                } else {
+                    console.warn("Wrong data returned for GEE layer " + theID + ".");
+                }
+            })
+            .catch(response => {
+                console.log("Error loading GEE imagery:");
+                console.log(response);
+            });
     }
+    return theID;
+};
+
+// [Pure] Returns a new ol.source.* object or null if the sourceConfig
+// is invalid.
+mercator.createSource = (sourceConfig, imageryId, documentRoot) =>
+    ["DigitalGlobe", "EarthWatch"].includes(sourceConfig.type) ?
+    new XYZ({
+        url: documentRoot + "/get-tile?imageryId=" + imageryId + "&z={z}&x={x}&y={-y}",
+        attribution: "© DigitalGlobe, Inc",
+    })
+    : sourceConfig.type === "Planet" ?
+    new XYZ({
+        url: documentRoot
+            + "/get-tile?imageryId=" + imageryId
+            + "&z={z}&x={x}&y={y}&tile={0-3}&month=" + sourceConfig.month
+            + "&year=" + sourceConfig.year,
+        attribution: "© Planet Labs, Inc",
+    })
+    : sourceConfig.type === "BingMaps" ?
+    new BingMaps({
+        imagerySet: sourceConfig.imageryId,
+        key: sourceConfig.accessToken,
+        maxZoom: 19,
+    })
+    : sourceConfig.type === "GeoServer" ?
+    new TileWMS({
+        serverType: "geoserver",
+        url: documentRoot + "/get-tile",
+        params: { LAYERS: "none", imageryId: imageryId },
+    })
+    : sourceConfig.type === "GeeGateway" ?
+    new XYZ({
+        id: mercator.sendGeeQuery(sourceConfig), // FIXME: theID should be the layer title
+        url: "https://earthengine.googleapis.com/map/temp/{z}/{x}/{y}?token=",
+    })
+    : null;
+
+// [Pure] Returns a new TileLayer object or null if the layerConfig is
+// invalid.
+mercator.createLayer = (layerConfig, documentRoot) => {
+    layerConfig.sourceConfig.create = true; // FIXME: Remove this once udpating GEE layers is moved to geo-dash.js.
+    const source = mercator.createSource(layerConfig.sourceConfig, layerConfig.id, documentRoot);
+    return source
+        ? new TileLayer({
+            title: layerConfig.title,
+            visible: false,
+            // extent: layerConfig.extent || mercator.getFullExtent(),
+            source: source,
+        })
+        : null;
 };
 
 /*****************************************************************************
