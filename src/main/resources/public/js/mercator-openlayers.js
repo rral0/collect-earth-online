@@ -49,23 +49,17 @@ const mercator = {};
 
 // [Pure] Returns the passed in [longitude, latitude] values
 // reprojected to Web Mercator as [x, y].
-mercator.reprojectToMap = function (longitude, latitude) {
-    return transform([Number(longitude), Number(latitude)],
-                     "EPSG:4326",
-                     "EPSG:3857");
-};
+mercator.reprojectToMap = (longitude, latitude) =>
+    transform([Number(longitude), Number(latitude)], "EPSG:4326", "EPSG:3857");
 
 // [Pure] Returns the passed in [x, y] values reprojected to WGS84 as
 // [longitude, latitude].
-mercator.reprojectFromMap = function (x, y) {
-    return transform([Number(x), Number(y)],
-                     "EPSG:3857",
-                     "EPSG:4326");
-};
+mercator.reprojectFromMap = (x, y) =>
+    transform([Number(x), Number(y)], "EPSG:3857", "EPSG:4326");
 
 // [Pure] Returns a bounding box for the globe in Web Mercator as
 // [llx, lly, urx, ury].
-mercator.getFullExtent = function () {
+mercator.getFullExtent = () => {
     const llxy = mercator.reprojectToMap(-180.0, -89.999999);
     const urxy = mercator.reprojectToMap(180.0, 90.0);
     return [llxy[0], llxy[1], urxy[0], urxy[1]];
@@ -73,7 +67,7 @@ mercator.getFullExtent = function () {
 
 // [Pure] Returns a bounding box for the current map view in WGS84
 // lat/lon as [llx, lly, urx, ury].
-mercator.getViewExtent = function (mapConfig) {
+mercator.getViewExtent = (mapConfig) => {
     const size = mapConfig.map.getSize();
     const extent = mapConfig.view.calculateExtent(size);
     return transformExtent(extent, "EPSG:3857", "EPSG:4326");
@@ -81,7 +75,7 @@ mercator.getViewExtent = function (mapConfig) {
 
 // [Pure] Returns the minimum distance in meters from the view center
 // to the view extent.
-mercator.getViewRadius = function (mapConfig) {
+mercator.getViewRadius = (mapConfig) => {
     const size = mapConfig.map.getSize();
     const [llx, lly, urx, ury] = mapConfig.view.calculateExtent(size);
     const width = Math.abs(urx - llx);
@@ -230,24 +224,16 @@ mercator.createLayer = function (layerConfig, documentRoot) {
 *****************************************************************************/
 
 // [Pure] Predicate
-mercator.verifyDivName = function (divName) {
-    return document.getElementById(divName) != null;
-};
+mercator.verifyDivName = (divName) => document.getElementById(divName) != null;
 
 // [Pure] Predicate
-mercator.verifyCenterCoords = function (centerCoords) {
-    const lon = centerCoords[0];
-    const lat = centerCoords[1];
-    return lon >= -180 && lon <= 180 && lat >= -90 && lat <= 90;
-};
+mercator.verifyCenterCoords = ([lon, lat]) => lon >= -180 && lon <= 180 && lat >= -90 && lat <= 90;
 
 // [Pure] Predicate
-mercator.verifyZoomLevel = function (zoomLevel) {
-    return zoomLevel >= 0 && zoomLevel <= 20;
-};
+mercator.verifyZoomLevel = (zoomLevel) => zoomLevel >= 0 && zoomLevel <= 20;
 
 // [Pure] Predicate
-mercator.verifyLayerConfig = function (layerConfig) {
+mercator.verifyLayerConfig = (layerConfig) => {
     const layerKeys = Object.keys(layerConfig);
     return layerKeys.includes("title")
         && layerKeys.includes("extent")
@@ -256,26 +242,16 @@ mercator.verifyLayerConfig = function (layerConfig) {
 };
 
 // [Pure] Predicate
-mercator.verifyLayerConfigs = function (layerConfigs) {
-    return layerConfigs.every(mercator.verifyLayerConfig);
-};
+mercator.verifyLayerConfigs = (layerConfigs) => layerConfigs.every(mercator.verifyLayerConfig);
 
-mercator.currentMap = null;
 // [Pure] Returns the first error message generated while testing the
 // input arguments or null if all tests pass.
-mercator.verifyMapInputs = function (divName, centerCoords, zoomLevel, layerConfigs) {
-    if (!mercator.verifyDivName(divName)) {
-        return "Invalid divName -> " + divName;
-    } else if (!mercator.verifyCenterCoords(centerCoords)) {
-        return "Invalid centerCoords -> " + centerCoords;
-    } else if (!mercator.verifyZoomLevel(zoomLevel)) {
-        return "Invalid zoomLevel -> " + zoomLevel;
-    } else if (!mercator.verifyLayerConfigs(layerConfigs)) {
-        return "Invalid layerConfigs -> " + layerConfigs;
-    } else {
-        return null;
-    }
-};
+mercator.verifyMapInputs = (divName, centerCoords, zoomLevel, layerConfigs) =>
+    !mercator.verifyDivName(divName)             ? "Invalid divName -> " + divName
+    : !mercator.verifyCenterCoords(centerCoords) ? "Invalid centerCoords -> " + centerCoords
+    : !mercator.verifyZoomLevel(zoomLevel)       ? "Invalid zoomLevel -> " + zoomLevel
+    : !mercator.verifyLayerConfigs(layerConfigs) ? "Invalid layerConfigs -> " + layerConfigs
+    : null;
 
 /*****************************************************************************
 ***
@@ -306,7 +282,7 @@ mercator.verifyMapInputs = function (divName, centerCoords, zoomLevel, layerConf
 //                                                     geoserverParams: {VERSION: "1.1.1",
 //                                                                       LAYERS: "DigitalGlobe:Imagery",
 //                                                                       CONNECTID: "your-digital-globe-connect-id-here"}}}]);
-mercator.createMap = function (divName, centerCoords, zoomLevel, layerConfigs, documentRoot) {
+mercator.createMap = (divName, centerCoords, zoomLevel, layerConfigs, documentRoot) => {
     const errorMsg = mercator.verifyMapInputs(divName, centerCoords, zoomLevel, layerConfigs);
     if (errorMsg) {
         console.error(errorMsg);
@@ -333,7 +309,10 @@ mercator.createMap = function (divName, centerCoords, zoomLevel, layerConfigs, d
             controls: controls,
             view: view,
         });
+
+        // FIXME: Remove mercator.currentMap once Billy's GEE layers are updated from geo-dash.js
         mercator.currentMap = map;
+
         // Return the map configuration object
         return {
             init: {
@@ -359,7 +338,7 @@ mercator.createMap = function (divName, centerCoords, zoomLevel, layerConfigs, d
 
 // [Side Effects] Removes the mapConfig's map from its container div.
 // Returns null.
-mercator.destroyMap = function (mapConfig) {
+mercator.destroyMap = (mapConfig) => {
     document.getElementById(mapConfig.init.divName).innerHTML = "";
     return null;
 };
@@ -377,7 +356,7 @@ mercator.destroyMap = function (mapConfig) {
 //
 // Example call:
 // const newMapConfig = mercator.resetMap(mapConfig);
-mercator.resetMap = function (mapConfig) {
+mercator.resetMap = (mapConfig) => {
     mercator.destroyMap(mapConfig);
     return mercator.createMap(mapConfig.init.divName,
                               mapConfig.init.centerCoords,
