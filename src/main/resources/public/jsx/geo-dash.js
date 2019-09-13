@@ -581,13 +581,7 @@ class MapWidget extends React.Component {
                 },
                 body: JSON.stringify(postObject),
             })
-                .then(res => {
-                    if (res.ok) {
-                        return res.json();
-                    } else {
-                        Promise.reject();
-                    }
-                })
+                .then(res => res.ok ? res.json() : Promise.reject())
                 .then(data => {
                     if (data.hasOwnProperty("mapid")) {
                         data.lastGatewayUpdate = new Date();
@@ -675,9 +669,7 @@ class MapWidget extends React.Component {
                         }
                     }
                 })
-                .catch(error => {
-                    console.log(error);
-                });
+                .catch(error => console.log(error));
         }
         window.addEventListener("resize", () => this.handleResize());
     }
@@ -1058,8 +1050,6 @@ class GraphWidget extends React.Component {
         };
     }
 
-    sortData = (a, b) => (a[0] < b[0]) ? -1 : (a[0] > b[0]) ? 1 : 0;
-
     componentDidMount() {
         const widget = this.props.widget;
         const collectionName = widget.properties[1];
@@ -1109,6 +1099,8 @@ class GraphWidget extends React.Component {
     componentDidUpdate() {
         this.handleResize();
     }
+
+    sortData = (a, b) => (a[0] < b[0]) ? -1 : (a[0] > b[0]) ? 1 : 0;
 
     handleResize = () => {
         try {
@@ -1205,22 +1197,6 @@ class StatsWidget extends React.Component {
         this.state = { totalPop:"", area:"", elevation:"" };
     }
 
-    numberWithCommas = x => {
-        if (typeof x === "number") {
-            try {
-                const [quot, rem] = x.toString().split(".");
-                return [quot.replace(/\B(?=(\d{3})+(?!\d))/g, ","), rem].join(".");
-            } catch (e) {
-                console.warn(e.message);
-                return "N/A";
-            }
-        } else {
-            return "N/A";
-        }
-    };
-
-    calculateArea = poly => this.numberWithCommas(Math.round(Math.abs(sphereGetArea(poly))) / 10000);
-
     componentDidMount() {
         const projPairAOI = this.props.projPairAOI;
         fetch(this.props.documentRoot + "/geo-dash/gateway-request", {
@@ -1239,11 +1215,31 @@ class StatsWidget extends React.Component {
                 if (data.errMsg) {
                     console.warn(data.errMsg);
                 } else {
-                    this.setState({ totalPop: this.numberWithCommas(data.pop), area: this.calculateArea(JSON.parse(projPairAOI)) + " ha", elevation: this.numberWithCommas(data.minElev) + " - " + this.numberWithCommas(data.maxElev) + " m" });
+                    this.setState({
+                        totalPop: this.numberWithCommas(data.pop),
+                        area: this.calculateArea(new Polygon([JSON.parse(projPairAOI)])) + " ha",
+                        elevation: this.numberWithCommas(data.minElev) + " - " + this.numberWithCommas(data.maxElev) + " m",
+                    });
                 }
             })
             .catch(error => console.log(error));
     }
+
+    numberWithCommas = x => {
+        if (typeof x === "number") {
+            try {
+                const [quot, rem] = x.toString().split(".");
+                return [quot.replace(/\B(?=(\d{3})+(?!\d))/g, ","), rem].join(".");
+            } catch (e) {
+                console.warn(e.message);
+                return "N/A";
+            }
+        } else {
+            return "N/A";
+        }
+    };
+
+    calculateArea = poly => this.numberWithCommas(Math.round(Math.abs(sphereGetArea(poly))) / 10000);
 
     render() {
         const widget = this.props.widget;
