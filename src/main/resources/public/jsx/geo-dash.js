@@ -3,14 +3,23 @@ import ReactDOM from "react-dom";
 import { mercator } from "../js/mercator-openlayers.js";
 import { UnicodeIcon } from "./utils/textUtils";
 
-import { Feature, Map, View } from "ol";
-import { buffer as ExtentBuffer } from "ol/extent";
-import { Circle, Polygon, Point } from "ol/geom";
-import { Tile as TileLayer, Vector as VectorLayer } from "ol/layer";
+// OpenLayers imports
+import Circle                         from "ol/geom/Circle";
+import Feature                        from "ol/Feature";
+import Map                            from "ol/Map";
+import OSM                            from "ol/source/OSM";
+import Point                          from "ol/geom/Point";
+import Polygon                        from "ol/geom/Polygon";
+import Stroke                         from "ol/style/Stroke";
+import Style                          from "ol/style/Style";
+import TileLayer                      from "ol/layer/Tile";
+import VectorLayer                    from "ol/layer/Vector";
+import VectorSource                   from "ol/source/Vector";
+import View                           from "ol/View";
+import XYZ                            from "ol/source/XYZ";
+import { buffer as ExtentBuffer }     from "ol/extent";
+import { getArea as sphereGetArea }   from "ol/sphere";
 import { transform as projTransform } from "ol/proj";
-import { OSM, Vector, XYZ } from "ol/source";
-import { Style, Stroke } from "ol/style";
-import { getArea as sphereGetArea } from "ol/sphere";
 
 class Geodash extends React.Component {
     constructor(props) {
@@ -348,8 +357,8 @@ class MapWidget extends React.Component {
             mapRef: null,
             opacity: 90,
             geeTimeOut: null,
-            internalExtent:null,
-            mapCenter:null,
+            internalExtent: null,
+            mapCenter: null,
             wasFull:false,
         };
     }
@@ -673,7 +682,6 @@ class MapWidget extends React.Component {
         window.addEventListener("resize", () => this.handleResize());
     }
 
-
     componentDidUpdate() {
         if (this.props.widget.isFull !== this.state.wasFull) {
             this.state.mapRef.updateSize();
@@ -958,7 +966,7 @@ class MapWidget extends React.Component {
                     ]
                 );
                 const bufferedFeature = new Feature(bufferPolygon);
-                const vectorSource = new Vector({});
+                const vectorSource = new VectorSource({});
                 vectorSource.addFeatures([bufferedFeature]);
                 const layer = new VectorLayer({
                     source: vectorSource,
@@ -976,7 +984,7 @@ class MapWidget extends React.Component {
             } else if (plotshape && plotshape === "circle") {
                 const circle = new Circle(projTransform(JSON.parse(bcenter).coordinates, "EPSG:4326", "EPSG:3857"), bradius * 1);
                 const CircleFeature = new Feature(circle);
-                const vectorSource = new Vector({});
+                const vectorSource = new VectorSource({});
                 vectorSource.addFeatures([CircleFeature]);
                 const layer = new VectorLayer({
                     source: vectorSource,
@@ -1190,6 +1198,7 @@ class GraphWidget extends React.Component {
         </div>;
     }
 }
+
 class StatsWidget extends React.Component {
     constructor(props) {
         super(props);
