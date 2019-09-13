@@ -17,17 +17,38 @@
 *****************************************************************************/
 
 import "ol/ol.css";
-import { Feature, Map, Overlay, View } from "ol";
-import { defaults as ControlDefaults, ScaleLine } from "ol/control";
-import { platformModifierKeyOnly } from "ol/events/condition";
-import { Circle, LineString, Point } from "ol/geom";
-import { DragBox, Select } from "ol/interaction";
-import { GeoJSON, KML } from "ol/format";
-import { Tile as TileLayer, Vector as VectorLayer } from "ol/layer";
-import { BingMaps, Cluster, TileWMS, Vector as VectorSource, XYZ } from "ol/source";
-import { Circle as CircleStyle, Icon, Fill, Stroke, Style, Text as StyleText, RegularShape } from "ol/style";
+
+import BingMaps                                   from "ol/source/BingMaps";
+import Circle                                     from "ol/geom/Circle";
+import CircleStyle                                from "ol/style/Circle";
+import Cluster                                    from "ol/source/Cluster";
+import DragBox                                    from "ol/interaction/DragBox";
+import Feature                                    from "ol/Feature";
+import Fill                                       from "ol/style/Fill";
+import GeoJSON                                    from "ol/format/GeoJSON";
+import Icon                                       from "ol/style/Icon";
+import KML                                        from "ol/format/KML";
+import LineString                                 from "ol/geom/LineString";
+import Map                                        from "ol/Map";
+import Overlay                                    from "ol/Overlay";
+import Point                                      from "ol/geom/Point";
+import RegularShape                               from "ol/style/RegularShape";
+import ScaleLine                                  from "ol/control/ScaleLine";
+import Select                                     from "ol/interaction/Select";
+import Stroke                                     from "ol/style/Stroke";
+import Style                                      from "ol/style/Style";
+import Text                                       from "ol/style/Text";
+import TileLayer                                  from "ol/layer/Tile";
+import TileWMS                                    from "ol/source/TileWMS";
+import VectorLayer                                from "ol/layer/Vector";
+import VectorSource                               from "ol/source/Vector";
+import View                                       from "ol/View";
+import XYZ                                        from "ol/source/XYZ";
+import { createEmpty as createEmptyExtent }       from "ol/extent";
+import { defaults as ControlDefaults }            from "ol/control";
+import { fromExtent, fromCircle }                 from "ol/geom/Polygon";
 import { fromLonLat, transform, transformExtent } from "ol/proj";
-import { fromExtent, fromCircle } from "ol/geom/Polygon";
+import { platformModifierKeyOnly }                from "ol/events/condition";
 
 /******************************************************************************
 ***
