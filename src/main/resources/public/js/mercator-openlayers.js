@@ -439,13 +439,12 @@ mercator.updateLayerWmsParams = (mapConfig, layerTitle, newParams) => {
 };
 
 // [Side Effects] Zooms the map view to contain the passed in extent.
-mercator.zoomMapToExtent = function (mapConfig, extent, maxZoom) {
-    if (extent) {
-        if (extent[0] <= -13630599.62775418 && extent[1] <= -291567.89923496445 && extent[2] >= 20060974.510472793 && extent[3] >= 10122013.145404479) {
-            extent = [-13630599.62775418, -291567.89923496445, 20060974.510472793, 10122013.145404479];
-        }
-    }
-    mapConfig.view.fit(extent,
+mercator.zoomMapToExtent = (mapConfig, extent, maxZoom) => {
+    // FIXME: What is the extent limiting code for?
+    mapConfig.view.fit([Math.max(extent[0], -13630599.62775418),
+                        Math.max(extent[1], -291567.89923496445),
+                        Math.min(extent[2], 20060974.510472793),
+                        Math.min(extent[3], 10122013.145404479)],
                        mapConfig.map.getSize(),
                        { maxZoom: maxZoom || 19 });
     return mapConfig;
@@ -453,7 +452,7 @@ mercator.zoomMapToExtent = function (mapConfig, extent, maxZoom) {
 
 // [Side Effects] Zooms the map view to contain the layer with
 // title === layerTitle.
-mercator.zoomMapToLayer = function (mapConfig, layerTitle, maxZoom) {
+mercator.zoomMapToLayer = (mapConfig, layerTitle, maxZoom) => {
     const layer = mercator.getLayerByTitle(mapConfig, layerTitle);
     if (layer) {
         mercator.zoomMapToExtent(mapConfig, layer.getSource().getExtent(), maxZoom);
@@ -468,50 +467,45 @@ mercator.zoomMapToLayer = function (mapConfig, layerTitle, maxZoom) {
 *****************************************************************************/
 
 // [Pure] Returns a style object that displays the image at imageSrc.
-mercator.getIconStyle = function (imageSrc) {
-    return new Style({ image: new Icon({ src: imageSrc }) });
-};
+mercator.getIconStyle = (imageSrc) => new Style({ image: new Icon({ src: imageSrc }) });
 
 // [Pure] Returns a style object that displays a circle with the
 // specified radius, fillColor, borderColor, and borderWidth. If text
 // and textFillColor are also passed, they will be used to overlay
 // text on the circle.
-mercator.getCircleStyle = function (radius, fillColor, borderColor, borderWidth, text, textFillColor) {
-    if (!text || !textFillColor) {
-        return new Style({
-            image: new CircleStyle({
-                radius: radius,
-                fill: fillColor ? new Fill({ color: fillColor }) : null,
-                stroke: new Stroke({
-                    color: borderColor,
-                    width: borderWidth,
-                }),
+mercator.getCircleStyle = (radius, fillColor, borderColor, borderWidth, text, textFillColor) =>
+    (!text || !textFillColor)
+    ? new Style({
+        image: new CircleStyle({
+            radius: radius,
+            fill: fillColor ? new Fill({ color: fillColor }) : null,
+            stroke: new Stroke({
+                color: borderColor,
+                width: borderWidth,
             }),
-        });
-    } else {
-        return new Style({
-            image: new CircleStyle({
-                radius: radius,
-                fill: fillColor ? new Fill({ color: fillColor }) : null,
-                stroke: new Stroke({
-                    color: borderColor,
-                    width: borderWidth,
-                }),
+        }),
+    })
+    : new Style({
+        image: new CircleStyle({
+            radius: radius,
+            fill: fillColor ? new Fill({ color: fillColor }) : null,
+            stroke: new Stroke({
+                color: borderColor,
+                width: borderWidth,
             }),
-            text: new Text({
-                text: text.toString(),
-                fill: new Fill({ color: textFillColor }),
-            }),
-        });
-    }
-};
+        }),
+        text: new Text({
+            text: text.toString(),
+            fill: new Fill({ color: textFillColor }),
+        }),
+    });
 
 // [Pure] Returns a style object that displays a shape with the
 // specified number of points, radius, rotation, fillColor,
 // borderColor, and borderWidth. A triangle has 3 points. A square has
 // 4 points with rotation pi/4. A star has 5 points.
-mercator.getRegularShapeStyle = function (radius, points, rotation, fillColor, borderColor, borderWidth) {
-    return new Style({
+mercator.getRegularShapeStyle = (radius, points, rotation, fillColor, borderColor, borderWidth) =>
+    new Style({
         image: new RegularShape({
             radius: radius,
             points: points,
@@ -523,20 +517,18 @@ mercator.getRegularShapeStyle = function (radius, points, rotation, fillColor, b
             }),
         }),
     });
-};
 
 // [Pure] Returns a style object that displays any shape to which it
 // is applied wth the specified fillColor, borderColor, and
 // borderWidth.
-mercator.getPolygonStyle = function (fillColor, borderColor, borderWidth) {
-    return new Style({
+mercator.getPolygonStyle = (fillColor, borderColor, borderWidth) =>
+    new Style({
         fill: fillColor ? new Fill({ color: fillColor }) : null,
         stroke: new Stroke({
             color: borderColor,
             width: borderWidth,
         }),
     });
-};
 
 const ceoMapStyles = {
     icon:          mercator.getIconStyle("favicon.ico"),
@@ -565,7 +557,7 @@ const ceoMapStyles = {
 *****************************************************************************/
 
 // [Side Effects] Adds a new vector layer to the mapConfig's map object.
-mercator.addVectorLayer = function (mapConfig, layerTitle, vectorSource, style) {
+mercator.addVectorLayer = (mapConfig, layerTitle, vectorSource, style) => {
     const vectorLayer = new VectorLayer({
         title: layerTitle,
         source: vectorSource,
@@ -577,7 +569,7 @@ mercator.addVectorLayer = function (mapConfig, layerTitle, vectorSource, style) 
 
 // [Side Effects] Removes the layer with title === layerTitle from
 // mapConfig's map object.
-mercator.removeLayerByTitle = function (mapConfig, layerTitle) {
+mercator.removeLayerByTitle = (mapConfig, layerTitle) => {
     const layer = mercator.getLayerByTitle(mapConfig, layerTitle);
     if (layer) {
         mapConfig.map.removeLayer(layer);
@@ -589,45 +581,35 @@ mercator.removeLayerByTitle = function (mapConfig, layerTitle) {
 // in the passed in GeoJSON string. If reprojectToMap is true,
 // reproject the created geometry from WGS84 to Web Mercator before
 // returning.
-mercator.parseGeoJson = function (geoJson, reprojectToMap) {
-    const format = new GeoJSON();
-    const geometry = format.readGeometry(geoJson);
-    if (reprojectToMap) {
-        return geometry.transform("EPSG:4326", "EPSG:3857");
-    } else {
-        return geometry;
-    }
+mercator.parseGeoJson = (geoJson, reprojectToMap) => {
+    const geometry = (new GeoJSON()).readGeometry(geoJson);
+    return reprojectToMap ? geometry.transform("EPSG:4326", "EPSG:3857") : geometry;
 };
 
 // [Pure] Returns a new vector source containing the passed in geometry.
-mercator.geometryToVectorSource = function (geometry) {
-    return new VectorSource({
+mercator.geometryToVectorSource = (geometry) =>
+    new VectorSource({
         features: [
             new Feature({ geometry: geometry }),
         ],
     });
-};
 
 // [Pure] Returns a polygon geometry matching the passed in
 // parameters.
-mercator.getPlotPolygon = function (center, size, shape) {
-    const coords = mercator.parseGeoJson(center, true).getCoordinates();
-    const centerX = coords[0];
-    const centerY = coords[1];
+mercator.getPlotPolygon = (center, size, shape) => {
+    const [centerX, centerY] = mercator.parseGeoJson(center, true).getCoordinates();
     const radius = size / 2;
-    if (shape === "circle") {
-        return new Circle([centerX, centerY], radius);
-    } else {
-        return fromExtent([centerX - radius,
-                           centerY - radius,
-                           centerX + radius,
-                           centerY + radius]);
-    }
+    return shape === "circle"
+        ? new Circle([centerX, centerY], radius)
+        : fromExtent([centerX - radius,
+                      centerY - radius,
+                      centerX + radius,
+                      centerY + radius]);
 };
 
 // [Pure] Returns a bounding box for the plot in Web Mercator as [llx,
 // lly, urx, ury].
-mercator.getPlotExtent = function (center, size, shape) {
+mercator.getPlotExtent = (center, size, shape) => {
     const geometry = mercator.getPlotPolygon(center, size, shape);
     return transformExtent(geometry.getExtent(), "EPSG:3857", "EPSG:4326");
 };
@@ -635,37 +617,29 @@ mercator.getPlotExtent = function (center, size, shape) {
 // [Pure] Returns a new vector source containing the passed in plots.
 // Features are constructed from each plot using its id and center
 // fields.
-mercator.plotsToVectorSource = function (plots) {
-    const features = plots.map(
-        function (plot) {
-            const geometry = mercator.parseGeoJson(plot.center, true);
-            return new Feature({ plotId: plot.id, geometry: geometry });
-        }
-    );
-    return new VectorSource({ features: features });
-};
+mercator.plotsToVectorSource = (plots) =>
+    new VectorSource({
+        features: plots.map(plot => new Feature({
+            plotId: plot.id,
+            geometry: mercator.parseGeoJson(plot.center, true),
+        })),
+    });
 
 // [Side Effects] Adds three vector layers to the mapConfig's map
 // object: "flaggedPlots" in red, "analyzedPlots" in green, and
 // "unanalyzedPlots" in yellow.
-mercator.addPlotOverviewLayers = function (mapConfig, plots, shape) {
+mercator.addPlotOverviewLayers = (mapConfig, plots, shape) => {
     mercator.addVectorLayer(mapConfig,
                             "flaggedPlots",
-                            mercator.plotsToVectorSource(plots.filter(function (plot) {
-                                return plot.flagged === true;
-                            })),
+                            mercator.plotsToVectorSource(plots.filter(plot => plot.flagged === true)),
                             shape === "circle" ? ceoMapStyles.redCircle : ceoMapStyles.redSquare);
     mercator.addVectorLayer(mapConfig,
                             "analyzedPlots",
-                            mercator.plotsToVectorSource(plots.filter(function (plot) {
-                                return plot.analyses > 0 && plot.flagged === false;
-                            })),
+                            mercator.plotsToVectorSource(plots.filter(plot => plot.analyses > 0 && plot.flagged === false)),
                             shape === "circle" ? ceoMapStyles.greenCircle : ceoMapStyles.greenSquare);
     mercator.addVectorLayer(mapConfig,
                             "unanalyzedPlots",
-                            mercator.plotsToVectorSource(plots.filter(function (plot) {
-                                return plot.analyses === 0 && plot.flagged === false;
-                            })),
+                            mercator.plotsToVectorSource(plots.filter(plot => plot.analyses === 0 && plot.flagged === false)),
                             shape === "circle" ? ceoMapStyles.yellowCircle : ceoMapStyles.yellowSquare);
     return mapConfig;
 };
@@ -678,17 +652,12 @@ mercator.addPlotOverviewLayers = function (mapConfig, plots, shape) {
 
 // [Pure] Returns the map interaction with title === interactionTitle
 // or null if no such interaction exists.
-mercator.getInteractionByTitle = function (mapConfig, interactionTitle) {
-    return mapConfig.map.getInteractions().getArray().find(
-        function (interaction) {
-            return interaction.get("title") === interactionTitle;
-        }
-    );
-};
+mercator.getInteractionByTitle = (mapConfig, interactionTitle) =>
+    mapConfig.map.getInteractions().getArray().find(interaction => interaction.get("title") === interactionTitle);
 
 // [Side Effects] Removes the interaction with title === interactionTitle from
 // mapConfig's map object.
-mercator.removeInteractionByTitle = function (mapConfig, interactionTitle) {
+mercator.removeInteractionByTitle = (mapConfig, interactionTitle) => {
     const interaction = mercator.getInteractionByTitle(mapConfig, interactionTitle);
     if (interaction) {
         mapConfig.map.removeInteraction(interaction);
@@ -701,16 +670,16 @@ mercator.removeInteractionByTitle = function (mapConfig, interactionTitle) {
 // a feature is selected, its style is stored in featureStyles and
 // then cleared on the map. When a feature is deselected, its saved
 // style is restored on the map.
-mercator.makeClickSelect = function (interactionTitle, layer, featureStyles, setSampleId) {
+mercator.makeClickSelect = (interactionTitle, layer, featureStyles, setSampleId) => {
     const select = new Select({ layers: [layer] });
-    select.set("title", interactionTitle);
-    const action = function (event) {
+    select.set("title", interactionTitle); // FIXME: Can this be moved into the Select() constructor?
+    const action = (event) => {
         setSampleId(event.selected.length === 1 ? event.selected[0].get("sampleId") : -1);
-        event.selected.forEach(function (feature) {
-            featureStyles[feature.get("sampleId")] = feature.getStyle() !== null ? feature.getStyle() : featureStyles[feature.get("sampleId")];
+        event.selected.forEach(feature => {
+            featureStyles[feature.get("sampleId")] = feature.getStyle() || featureStyles[feature.get("sampleId")];
             feature.setStyle(null);
         });
-        event.deselected.forEach(function (feature) {
+        event.deselected.forEach(feature => {
             feature.setStyle(featureStyles[feature.get("sampleId")]);
         });
     };
@@ -723,36 +692,35 @@ mercator.makeClickSelect = function (interactionTitle, layer, featureStyles, set
 // a feature is selected, its style is stored in featureStyles and
 // then cleared on the map. When a feature is deselected, its saved
 // style is restored on the map.
-mercator.makeDragBoxSelect = function (interactionTitle, layer, featureStyles, selectedFeatures, setSampleId) {
+mercator.makeDragBoxSelect = (interactionTitle, layer, featureStyles, selectedFeatures, setSampleId) => {
     const dragBox = new DragBox({ condition: platformModifierKeyOnly });
-    dragBox.set("title", interactionTitle);
-    const boxstartAction = function () {
-        selectedFeatures.forEach(function (feature) {
+    dragBox.set("title", interactionTitle); // FIXME: Can this be moved into the DragBox() constructor?
+    const boxstartAction = () => {
+        selectedFeatures.forEach(feature => {
             feature.setStyle(featureStyles[feature.get("sampleId")]);
         });
         selectedFeatures.clear();
     };
-
-    const boxendAction = function () {
+    const boxendAction = () => {
         const extent = dragBox.getGeometry().getExtent();
-        const saveStyle = function (feature) {
+        const saveStyle = (feature) => {
             selectedFeatures.push(feature);
-            featureStyles[feature.get("sampleId")] = feature.getStyle() !== null ? feature.getStyle() : featureStyles[feature.get("sampleId")];
+            featureStyles[feature.get("sampleId")] = feature.getStyle() || featureStyles[feature.get("sampleId")];
             feature.setStyle(null);
             return false;
         };
         layer.getSource().forEachFeatureIntersectingExtent(extent, saveStyle);
-
         setSampleId(selectedFeatures.getLength() === 1 ? selectedFeatures.getArray()[0].get("sampleId") : -1);
     };
     dragBox.on("boxstart", boxstartAction);
     dragBox.on("boxend", boxendAction);
     return dragBox;
 };
+
 // [Side Effects] Adds a click select interaction and a dragBox select
 // interaction to mapConfig's map object associated with the layer
 // with title === layerTitle.
-mercator.enableSelection = function (mapConfig, layerTitle, setSampleId) {
+mercator.enableSelection = (mapConfig, layerTitle, setSampleId) => {
     const layer = mercator.getLayerByTitle(mapConfig, layerTitle);
     const featureStyles = {}; // holds saved styles for features selected by either interaction
     const clickSelect = mercator.makeClickSelect("clickSelect", layer, featureStyles, setSampleId);
@@ -765,7 +733,7 @@ mercator.enableSelection = function (mapConfig, layerTitle, setSampleId) {
 
 // [Side Effects] Removes the click select and dragBox select
 // interactions from mapConfig's map object.
-mercator.disableSelection = function (mapConfig) {
+mercator.disableSelection = (mapConfig) => {
     mercator.removeInteractionByTitle(mapConfig, "clickSelect");
     mercator.removeInteractionByTitle(mapConfig, "dragBoxSelect");
     return mapConfig;
@@ -780,7 +748,7 @@ mercator.disableSelection = function (mapConfig) {
 // [Side Effects] Adds a new vector layer called
 // point:<longitude>:<latitude> to mapConfig's map object containing a
 // single point geometry feature at the passed in coordinates.
-mercator.addPointLayer = function (mapConfig, longitude, latitude) {
+mercator.addPointLayer = (mapConfig, longitude, latitude) => {
     mercator.addVectorLayer(mapConfig,
                             "point:" + longitude + ":" + latitude,
                             mercator.geometryToVectorSource(new Point(mercator.reprojectToMap(longitude, latitude))),
@@ -791,43 +759,32 @@ mercator.addPointLayer = function (mapConfig, longitude, latitude) {
 // [Pure] Returns a new vector source containing the passed in
 // samples. Features are constructed from each sample using its id,
 // point, and geom fields.
-mercator.samplesToVectorSource = function (samples) {
-    const features = samples.map(
-        function (sample) {
-            return new Feature({
-                sampleId: sample.id,
-                geometry: mercator.parseGeoJson(sample.geom || sample.point, true),
-                shape: sample.geom ? "polygon" : "point",
-            });
-        }
-    );
-    return new VectorSource({ features: features });
-};
+mercator.samplesToVectorSource = (samples) =>
+    new VectorSource({
+        features: samples.map(sample => new Feature({
+            sampleId: sample.id,
+            geometry: mercator.parseGeoJson(sample.geom || sample.point, true),
+            shape: sample.geom ? "polygon" : "point",
+        })),
+    });
 
 // [Pure] Returns an ol.Collection containing the features selected by
 // the currently enabled click select and dragBox select interactions.
-mercator.getSelectedSamples = function (mapConfig) {
+mercator.getSelectedSamples = (mapConfig) => {
     const clickSelect = mercator.getInteractionByTitle(mapConfig, "clickSelect");
-    if (clickSelect) {
-        return clickSelect.getFeatures();
-    } else {
-        return null;
-    }
+    return clickSelect ? clickSelect.getFeatures() : null;
 };
 
-mercator.getAllFeatures = function (mapConfig, layerTitle) {
+// FIXME: Needs a docstring.
+mercator.getAllFeatures = (mapConfig, layerTitle) => {
     const layer = mercator.getLayerByTitle(mapConfig, layerTitle);
-    if (layer) {
-        return layer.getSource().getFeatures();
-    } else {
-        return null;
-    }
+    return layer ? layer.getSource().getFeatures() : null;
 };
 
 // [Side Effects] Sets the sample's style to be a circle with a black
 // border and filled with the passed in color. If color is null, the
 // circle will be filled with gray.
-mercator.highlightSampleGeometry = function (sample, color) {
+mercator.highlightSampleGeometry = (sample, color) => {
     if (sample.get("shape") === "point") {
         sample.setStyle(mercator.getCircleStyle(6, color, color, 2));
     } else {
