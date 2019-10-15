@@ -242,7 +242,7 @@ class BasicLayout extends React.PureComponent {
                         onClick={e => {
                             e.stopPropagation(); this.onRemoveItem(widget.layout.i);
                         }}
-                        onMouseDown={function(e) {
+                        onMouseDown={e => {
                             e.stopPropagation();
                         }}
                     >
@@ -275,9 +275,10 @@ class BasicLayout extends React.PureComponent {
 
     buildImageryObject = img => {
         const gatewayUrl = this.props.documentRoot + "/geo-dash/gateway-request";
-        let title = this.state.widgetTitle !== "" ? this.state.widgetTitle : img.filterType.replace(/\w\S*/g, function (word) {
-            return word.charAt(0) + word.slice(1).toLowerCase();
-        }) + ": " + img.startDate + " to " + img.endDate;
+        let title = this.state.widgetTitle !== ""
+            ? this.state.widgetTitle
+            : img.filterType.replace(/\w\S*/g, word => word.charAt(0) + word.slice(1).toLowerCase())
+                + ": " + img.startDate + " to " + img.endDate;
         const ImageAsset = img.ImageAsset ? img.ImageAsset : "";
         const ImageCollectionAsset = img.ImageCollectionAsset ? img.ImageCollectionAsset : "";
         const iObject = {
@@ -407,17 +408,13 @@ class BasicLayout extends React.PureComponent {
 
     onCreateNewWidget = () => {
         const widget = {};
-        const id = this.state.widgets.length > 0 ? (Math.max.apply(Math, this.state.widgets.map(function(o) {
-            return o.id;
-        }))) + 1 : 0;
+        const id = this.state.widgets.length > 0 ? (Math.max.apply(Math, this.state.widgets.map(o => o.id))) + 1 : 0;
         const name = this.state.widgetTitle;
         widget.id = id;
         widget.name = name;
-        const yval = ((Math.max.apply(Math, this.state.widgets.map(function (o) {
-            return o.layout.y !== null ? o.layout.y : 0;
-        }))) + 1) > -1 ? (Math.max.apply(Math, this.state.widgets.map(function (o) {
-            return o.layout.y !== null ? o.layout.y : 0;
-        }))) + 1 : 0;
+        const yval = ((Math.max.apply(Math, this.state.widgets.map(o => o.layout.y !== null ? o.layout.y : 0))) + 1) > -1
+              ? (Math.max.apply(Math, this.state.widgets.map(o => o.layout.y !== null ? o.layout.y : 0))) + 1
+              : 0;
 
         widget.layout = {
             i: id.toString(),
@@ -897,9 +894,8 @@ class BasicLayout extends React.PureComponent {
         }
     };
 
-    baseMapOptions = () => _.map(this.state.imagery, function (imagery) {
-        return <option key={imagery.id} value={imagery.id}> {imagery.title} </option>;
-    });
+    baseMapOptions = () => _.map(this.state.imagery,
+                                 imagery => <option key={imagery.id} value={imagery.id}> {imagery.title} </option>);
 
     getDataTypeSelectionControl = () => {
         if (this.state.selectedWidgetType === "-1") {
@@ -1179,7 +1175,7 @@ class BasicLayout extends React.PureComponent {
         } else {
             const gObject = this;
             setTimeout(() => {
-                $(".input-daterange input").each(function () {
+                $(".input-daterange input").each(() => {
                     try {
                         const bindEvt = this.id === "sDate_new_cookedDual"
                             ? gObject.onStartDateChangedDual
@@ -1196,7 +1192,7 @@ class BasicLayout extends React.PureComponent {
                             changeMonth: true,
                             changeYear: true,
                             dateFormat: "yy-mm-dd",
-                            onSelect: function() {
+                            onSelect: () => {
                                 bindEvt(this.value);
                             },
                         });
@@ -1633,23 +1629,17 @@ class BasicLayout extends React.PureComponent {
     };
 
     onRemoveItem = i => {
-        const removedWidget = _.filter(this.state.widgets, function(w) {
-            return w.layout.i === i.toString();
-        });
+        const removedWidget = _.filter(this.state.widgets, w => w.layout.i === i.toString());
         this.deleteWidgetFromServer(removedWidget[0]);
         this.setState({
-            widgets: _.reject(this.state.widgets, function(widget) {
-                return widget.layout.i === i.toString();
-            }),
-            layout: _.reject(this.state.layout, function(layout) {
-                return layout.i === i.toString();
-            }),
+            widgets: _.reject(this.state.widgets, widget => widget.layout.i === i.toString()),
+            layout: _.reject(this.state.layout, layout => layout.i === i.toString()),
         });
     };
 
     generateLayout = () => {
         const w = this.state.widgets;
-        return _.map(w, function(item, i) {
+        return _.map(w, (item, i) => {
             item.layout.i = i.toString();
             item.layout.minW = 3;
             item.layout.w = item.layout.w >= 3 ? item.layout.w : 3;
@@ -1660,7 +1650,7 @@ class BasicLayout extends React.PureComponent {
     onLayoutChange = layout => {
         if (this.state.haveWidgets) {
             const w = this.state.widgets;
-            layout.forEach(function (lay, i) {
+            layout.forEach((lay, i) => {
                 w[i].layout = lay;
             });
             this.setState({

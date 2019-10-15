@@ -380,16 +380,17 @@ class MapWidget extends React.Component {
             }),
             id: "widgetmapobject_" + widget.id,
         });
-        map.getView().on("propertychange", onpropertychange);
 
-        function onpropertychange() {
+        const onpropertychange = () => {
             map.dispatchEvent("movestart");
             const view = map.getView();
             view.un("propertychange", onpropertychange);
             map.on("moveend", () => {
                 view.on("propertychange", onpropertychange);
             });
-        }
+        };
+
+        map.getView().on("propertychange", onpropertychange);
 
         map.on("movestart", this.pauseGeeLayer);
         map.on("moveend", e => {
@@ -887,9 +888,9 @@ class MapWidget extends React.Component {
             const source = new XYZ({
                 url: "https://earthengine.googleapis.com/map/" + imageid + "/{z}/{x}/{y}?token=" + token,
             });
-            source.on("tileloaderror", function(error) {
+            source.on("tileloaderror", error => {
                 try {
-                    window.setTimeout(function() {
+                    window.setTimeout(() => {
                         console.log("trying to reload the tile: " );
                         console.log(error.tile);
                         error.tile.load();
@@ -1039,7 +1040,7 @@ class GraphWidget extends React.Component {
             graphRef: null,
             isFull:this.props.widget.isFull,
         };
-        Date.prototype.yyyymmdd = function() {
+        Date.prototype.yyyymmdd = () => {
             const mm = this.getMonth() + 1; // getMonth() is zero-based
             const dd = this.getDate();
 
