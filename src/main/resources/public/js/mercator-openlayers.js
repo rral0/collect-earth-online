@@ -81,9 +81,9 @@ mercator.reprojectFromMap = (x, y) =>
 // [Pure] Returns a bounding box for the globe in Web Mercator as
 // [llx, lly, urx, ury].
 mercator.getFullExtent = () => {
-    const llxy = mercator.reprojectToMap(-180.0, -89.999999);
-    const urxy = mercator.reprojectToMap(180.0, 90.0);
-    return [llxy[0], llxy[1], urxy[0], urxy[1]];
+    const [llx, lly] = mercator.reprojectToMap(-180.0, -89.999999);
+    const [urx, ury] = mercator.reprojectToMap(180.0, 90.0);
+    return [llx, lly, urx, ury];
 };
 
 // [Pure] Returns a bounding box for the current map view in WGS84
@@ -217,7 +217,7 @@ mercator.createSource = (sourceConfig, imageryId, documentRoot) =>
 // [Pure] Returns a new TileLayer object or null if the layerConfig is
 // invalid.
 mercator.createLayer = (layerConfig, documentRoot) => {
-    layerConfig.sourceConfig.create = true; // FIXME: Remove this once udpating GEE layers is moved to geo-dash.js.
+    layerConfig.sourceConfig.create = true; // FIXME: Remove this once updating GEE layers is moved to geo-dash.js.
     const source = mercator.createSource(layerConfig.sourceConfig, layerConfig.id, documentRoot);
     return source
         ? new TileLayer({
@@ -530,6 +530,7 @@ mercator.getPolygonStyle = (fillColor, borderColor, borderWidth) =>
         }),
     });
 
+// FIXME: Move ceoMapStyles out of mercator-openlayers.js into CEO proper.
 const ceoMapStyles = {
     icon:          mercator.getIconStyle("favicon.ico"),
     ceoIcon:       mercator.getIconStyle("img/ceoicon.png"),
@@ -805,19 +806,18 @@ mercator.highlightSampleGeometry = (sample, color) => {
 // removed, and the current box is added to the map layer as a new
 // feature. If a callBack function is provided, it will be called
 // after the new box is added to the map layer.
-mercator.makeDragBoxDraw = function (interactionTitle, layer, callBack) {
+mercator.makeDragBoxDraw = (interactionTitle, layer, callBack) => {
     const dragBox = new DragBox({
         title: interactionTitle,
         condition: platformModifierKeyOnly,
     });
-    const boxendAction = function () {
+    const boxendAction = () => {
         layer.getSource().clear();
         layer.getSource().addFeature(new Feature({ geometry: dragBox.getGeometry() }));
         if (callBack != null) {
             callBack.call(null, dragBox);
         }
     };
-    dragBox.set("title", interactionTitle);
     dragBox.on("boxend", boxendAction);
     return dragBox;
 };
@@ -825,7 +825,7 @@ mercator.makeDragBoxDraw = function (interactionTitle, layer, callBack) {
 // [Side Effects] Adds a dragBox draw interaction to mapConfig's map
 // object associated with a newly created empty vector layer called
 // "dragBoxLayer".
-mercator.enableDragBoxDraw = function (mapConfig, callBack) {
+mercator.enableDragBoxDraw = (mapConfig, callBack) => {
     const drawLayer = new VectorLayer({
         title: "dragBoxLayer",
         source: new VectorSource({ features: [] }),
@@ -839,7 +839,7 @@ mercator.enableDragBoxDraw = function (mapConfig, callBack) {
 
 // [Side Effects] Removes the dragBox draw interaction and its
 // associated layer from mapConfig's map object.
-mercator.disableDragBoxDraw = function (mapConfig) {
+mercator.disableDragBoxDraw = (mapConfig) => {
     mercator.removeInteractionByTitle(mapConfig, "dragBoxDraw");
     mercator.removeLayerByTitle(mapConfig, "dragBoxLayer");
     return mapConfig;
@@ -847,9 +847,8 @@ mercator.disableDragBoxDraw = function (mapConfig) {
 
 // [Pure] Returns the extent of the rectangle drawn by the passed-in
 // dragBox in lat/lon coords (EPSG:4326).
-mercator.getDragBoxExtent = function (dragBox) {
-    return dragBox.getGeometry().clone().transform("EPSG:3857", "EPSG:4326").getExtent();
-};
+mercator.getDragBoxExtent = (dragBox) =>
+    dragBox.getGeometry().clone().transform("EPSG:3857", "EPSG:4326").getExtent();
 
 /*****************************************************************************
 ***
@@ -859,41 +858,36 @@ mercator.getDragBoxExtent = function (dragBox) {
 
 // [Side Effects] Adds a new empty overlay to mapConfig's map object
 // with id set to overlayTitle.
-mercator.addOverlay = function (mapConfig, overlayTitle, element) {
+mercator.addOverlay = (mapConfig, overlayTitle, element) => {
     const overlay = new Overlay({
         id: overlayTitle,
         element: element,
-    });//?element:document.createElement("div")});
+    });
     mapConfig.map.addOverlay(overlay);
     return mapConfig;
 };
 
 // [Pure] Returns the map overlay with id === overlayTitle or null if
 // no such overlay exists.
-mercator.getOverlayByTitle = function (mapConfig, overlayTitle) {
-    return mapConfig.map.getOverlayById(overlayTitle);
-};
+mercator.getOverlayByTitle = (mapConfig, overlayTitle) =>
+    mapConfig.map.getOverlayById(overlayTitle);
 
 // [Pure] Returns a new ol.source.Cluster given the unclusteredSource and clusterDistance.
-mercator.makeClusterSource = function (unclusteredSource, clusterDistance) {
-    return new Cluster({
+mercator.makeClusterSource = (unclusteredSource, clusterDistance) =>
+    new Cluster({
         source: unclusteredSource,
         distance: clusterDistance,
     });
-};
 
 // [Pure] Returns true if the feature is a cluster, false otherwise.
-mercator.isCluster = function (feature) {
-    return feature && feature.get("features") && feature.get("features").length > 0;
-};
+mercator.isCluster = (feature) =>
+    feature && feature.get("features") && feature.get("features").length > 0;
 
 // [Pure] Returns the minimum extent that bounds all of the
 // subfeatures in the passed in clusterFeature.
-mercator.getClusterExtent = function (clusterFeature) {
+mercator.getClusterExtent = (clusterFeature) => {
     const clusterPoints = clusterFeature.get("features").map(
-        function (subFeature) {
-            return subFeature.getGeometry().getCoordinates();
-        }
+        subFeature => subFeature.getGeometry().getCoordinates()
     );
     return (new LineString(clusterPoints)).getExtent();
 };
@@ -902,14 +896,10 @@ mercator.getClusterExtent = function (clusterFeature) {
 // the centers of the passed in projects. Features are constructed
 // from each project using its id, name, description, and numPlots
 // fields.
-mercator.projectsToVectorSource = function (projects) {
+mercator.projectsToVectorSource = (projects) => {
     const features = projects.map(
-        function (project) {
-            const bounds = mercator.parseGeoJson(project.boundary, false).getExtent();
-            const minX = bounds[0];
-            const minY = bounds[1];
-            const maxX = bounds[2];
-            const maxY = bounds[3];
+        project => {
+            const [minX, minY, maxX, maxY] = mercator.parseGeoJson(project.boundary, false).getExtent();
             const centerX = (minX + maxX) / 2;
             const centerY = (minY + maxY) / 2;
             const geometry = new Point([centerX, centerY]).transform("EPSG:4326", "EPSG:3857");
@@ -930,24 +920,21 @@ mercator.projectsToVectorSource = function (projects) {
 // on clusters with more than one plot zooms the map view to the
 // extent covered by these plots. If a cluster only contains one plot,
 // the callBack function will be called on the cluster feature.
-mercator.addPlotLayer = function (mapConfig, plots, callBack) {
-    const plotSource = mercator.plotsToVectorSource(plots);
-    const clusterSource = new Cluster({
-        source:   plotSource,
-        distance: 40,
-    });
-
+mercator.addPlotLayer = (mapConfig, plots, callBack) => {
     mercator.addVectorLayer(mapConfig,
                             "currentPlots",
-                            clusterSource,
-                            function (feature) {
+                            new Cluster({
+                                source: mercator.plotsToVectorSource(plots),
+                                distance: 40,
+                            }),
+                            feature => {
                                 const numPlots = feature.get("features").length;
                                 return mercator.getCircleStyle(10, "#3399cc", "#ffffff", 1, numPlots, "#ffffff");
                             });
 
-    const clickHandler = function (event) {
+    const clickHandler = (event) => {
         mapConfig.map.forEachFeatureAtPixel(event.pixel,
-                                            function (feature) {
+                                            feature => {
                                                 if (mercator.isCluster(feature)) {
                                                     if (feature.get("features").length > 1) {
                                                         mercator.zoomMapToExtent(mapConfig,
@@ -958,7 +945,8 @@ mercator.addPlotLayer = function (mapConfig, plots, callBack) {
                                                         callBack.call(null, feature);
                                                     }
                                                 }
-                                            }, { hitTolerance:10 });
+                                            },
+                                            { hitTolerance: 10 });
     };
     mapConfig.map.on("click", clickHandler);
 
@@ -971,63 +959,15 @@ mercator.addPlotLayer = function (mapConfig, plots, callBack) {
 ***
 *****************************************************************************/
 
-mercator.asPolygonFeature = function (feature) {
-    return feature.getGeometry().getType() === "Circle"
-        ? new Feature({ geometry: fromCircle(feature.getGeometry()) })
-        : feature;
-};
+// FIXME: Needs a docstring.
+mercator.asPolygonFeature = (feature) =>
+    feature.getGeometry().getType() === "Circle"
+    ? new Feature({ geometry: fromCircle(feature.getGeometry()) })
+    : feature;
 
-mercator.getKMLFromFeatures = function (features) {
-    return (new KML()).writeFeatures(features, { featureProjection: "EPSG:3857" });
-};
-
-/*****************************************************************************
-***
-*** FIXMEs
-***
-*****************************************************************************/
-//
-// FIXME: Move ceoMapStyles out of Mercator.js
-// FIXME: change calls from remove_plot_layer to mercator.removeLayerByTitle(mapConfig, layerTitle)
-// FIXME: change calls from draw_polygon to:
-//        mercator.removeLayerByTitle(mapConfig, "currentAOI");
-//        mercator.addVectorLayer(mapConfig,
-//                                "currentAOI",
-//                                mercator.geometryToVectorSource(mercator.parseGeoJson(polygon, true)),
-//                                ceoMapStyles.yellowPolygon);
-//        mercator.zoomMapToLayer(mapConfig, "currentAOI");
-// FIXME: change calls from polygon_extent to mercator.parseGeoJson(polygon, false).getExtent()
-// FIXME: change calls from get_plot_extent to mercator.getPlotExtent
-// FIXME: change calls from draw_plot to:
-//        mercator.removeLayerByTitle(mapConfig, "currentPlot");
-//        mercator.addVectorLayer(mapConfig,
-//                                "currentPlot",
-//                                mercator.geometryToVectorSource(mercator.getPlotPolygon(center, size, shape)),
-//                                ceoMapStyles.yellowPolygon);
-//        mercator.zoomMapToLayer(mapConfig, "currentPlot");
-// FIXME: change calls from draw_plots to mercator.addPlotOverviewLayers
-// FIXME: for plots shown with draw_plots, change references to their plot_id field to plotId
-// FIXME: change calls from enable_selection to mercator.enableSelection
-// FIXME: change calls from disable_selection to mercator.disableSelection
-// FIXME: change calls from remove_sample_layer to mercator.removeLayerByTitle(mapConfig, "currentSamples");
-// FIXME: change calls from remove_plots_layer to mercator.removeLayerByTitle(mapConfig, "currentPlots");
-// FIXME: change calls from draw_points to:
-//        mercator.disableSelection(mapConfig);
-//        mercator.removeLayerByTitle(mapConfig, "currentSamples");
-//        mercator.addVectorLayer(mapConfig,
-//                                "currentSamples",
-//                                mercator.samplesToVectorSource(samples),
-//                                ceoMapStyles.redPoint);
-//        mercator.enableSelection(mapConfig, "currentSamples");
-//        mercator.zoomMapToLayer(mapConfig, "currentSamples");
-// FIXME: change references for points created with draw_points from sample_id to sampleId
-// FIXME: change calls from get_selected_samples to mercator.getSelectedSamples
-// FIXME: change calls from highlight_sample to mercator.highlightSampleGeometry
-// FIXME: change calls from enable_dragbox_draw to enableDragBoxDraw(mapConfig, displayDragBoxBounds)
-// FIXME: change calls from disable_dragbox_draw to disableDragBoxDraw
-// FIXME: change calls from draw_project_points to:
-//        mercator.removeLayerByTitle(mapConfig, "currentPlots");
-//        mercator.addPlotLayer(mapConfig, plots);
+// FIXME: Needs a docstring.
+mercator.getKMLFromFeatures = (features) =>
+    (new KML()).writeFeatures(features, { featureProjection: "EPSG:3857" });
 
 export {
     mercator,
