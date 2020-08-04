@@ -1,4 +1,5 @@
 # Developer Tool Config Files
+.cpcache
 .meghanada/
 .tern-port
 .gradle/
@@ -37,3 +38,9 @@ src/main/resources/scripts/bin
 src/main/resources/scripts/include
 src/main/resources/scripts/lib
 src/main/resources/scripts/pip-selfcheck.json
+
+# Log files
+/logs/*.log
+
+# SSL keystore
+/deploy/keystore.jks
