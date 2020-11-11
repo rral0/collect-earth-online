@@ -89,6 +89,7 @@
         visibility     (:visibility params)
         institution-id (tc/val->int (:institutionId params))]
     (call-sql "update_imagery_visibility" imagery-id visibility institution-id)
+    (when (= visibility "private") (call-sql "remove_private_imagery" imagery-id institution-id))
     (data-response "")))
 
 (defn archive-institution-imagery [{:keys [params]}]

@@ -86,7 +86,14 @@ CREATE OR REPLACE FUNCTION update_imagery_visibility(
 
     UPDATE imagery
     SET visibility = _visibility
-    WHERE imagery_uid = _imagery_id;
+    WHERE imagery_uid = _imagery_id
+
+$$ LANGUAGE SQL;
+
+CREATE OR REPLACE FUNCTION remove_private_imagery(
+    _imagery_id        integer,
+    _institution_id    integer
+ ) RETURNS void AS $$
 
     UPDATE projects
     SET imagery_rid = (SELECT select_first_public_imagery())
